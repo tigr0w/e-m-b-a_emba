@@ -26,14 +26,21 @@ See [CONTRIBUTING.md](https://github.com/e-m-b-a/emba/blob/master/CONTRIBUTING.m
 
 These people have contributed to EMBA:
 
-* Michael Messner (original author)
-* Pascal Eckmann (original author)
-* [Benedikt Kuehne](https://github.com/BenediktMKuehne)
+* [Michael Messner (original author, maintainer)](https://github.com/m-1-k-3)
+* [Pascal Eckmann (original author)](https://github.com/p4cx)
+* [Benedikt Kuehne (EMBArk maintainer)](https://github.com/BenediktMKuehne)
+* [HoxhaEndri](https://github.com/HoxhaEndri)
 * [Arnold Unterauer](https://github.com/Anemosx)
 * [seanog8](https://github.com/seanog8)
 * [Stefan Haboeck](https://github.com/StefanHaboeck)
+* [jblu42](https://github.com/jblu42)
+* [413x8](https://github.com/413x8)
+* [floyd-fuh](https://github.com/floyd-fuh)
 * [firmianay](https://github.com/firmianay)
+* [mj138](https://github.com/mj138)
+* [Grezzo](https://github.com/Grezzo)
 * [nightlark](https://github.com/nightlark)
 
+
 ==========================================================================================
-  EMBA - Embedded Analyzer - [https://e-m-b-a.github.io](https://e-m-b-a.github.io/)
+  [EMBA - Embedded Analyzer](https://www.securefirmware.de)
