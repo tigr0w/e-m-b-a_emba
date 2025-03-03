@@ -3,13 +3,14 @@
 # EMBA - EMBEDDED LINUX ANALYZER
 #
 # Copyright 2020-2023 Siemens AG
-# Copyright 2020-2023 Siemens Energy AG
+# Copyright 2020-2025 Siemens Energy AG
 #
 # EMBA comes with ABSOLUTELY NO WARRANTY. This is free software, and you are
 # welcome to redistribute it under the terms of the GNU General Public License.
 # See LICENSE file for usage of this software.
 #
 # EMBA is licensed under GPLv3
+# SPDX-License-Identifier: GPL-3.0-only
 #
 # Author(s): Michael Messner, Pascal Eckmann
 # Contributor(s): Stefan Haboeck, Nikolas Papaioannou
@@ -85,7 +86,7 @@ echo ""
 echo -e "==> ""${GREEN}""Imported ""${INSTALLER_COUNT}"" installer module files""${NC}"
 echo ""
 
-if [[ "$#" -le 1 ]] && [[ "$#" -gt 2 ]]; then
+if [[ "$#" -lt 1 ]] || [[ "$#" -gt 2 ]]; then
   echo -e "${RED}""${BOLD}""Invalid number of arguments""${NC}"
   echo -e "\n\n------------------------------------------------------------------"
   echo -e "If you are going to install EMBA in default mode you can use:"
@@ -179,8 +180,8 @@ if ! grep -Eq "ID(_LIKE)?=(\")?(ubuntu)?( )?(debian)?" /etc/os-release 2>/dev/nu
   print_help
   exit 1
 elif ! grep -q "kali" /etc/debian_version 2>/dev/null ; then
-  if grep -q "VERSION_ID=\"22.04\"" /etc/os-release 2>/dev/null ; then
-  # How to handle sub-versioning ? if grep -q -E "PRETTY_NAME=\"Ubuntu\ 22\.04(\.[0-9]+)?\ LTS\"" /etc/os-release 2>/dev/null ; then
+  if grep -q "VERSION_ID=\"22.04\"\|VERSION_ID=\"24.04\"" /etc/os-release 2>/dev/null ; then
+    # How to handle sub-versioning ? if grep -q -E "PRETTY_NAME=\"Ubuntu\ 22\.04(\.[0-9]+)?\ LTS\"" /etc/os-release 2>/dev/null ; then
     OTHER_OS=1
     UBUNTU_OS=1
   elif grep -q "PRETTY_NAME=\"Ubuntu 20.04 LTS\"" /etc/os-release 2>/dev/null ; then
@@ -237,8 +238,8 @@ if [[ "${IN_DOCKER}" -eq 0 ]]; then
   fi
 
   FREE_SPACE=$(df --output=avail "${DDISK}" | awk 'NR==2')
-  if [[ "${FREE_SPACE}" -lt 13000000 ]]; then
-    echo -e "\\n""${ORANGE}""EMBA installation in default mode needs a minimum of 13Gig for the docker image""${NC}"
+  if [[ "${FREE_SPACE}" -lt 19000000 ]]; then
+    echo -e "\\n""${ORANGE}""EMBA installation in default mode needs a minimum of 18Gig for the docker image""${NC}"
     echo -e "\\n""${ORANGE}""Please free enough space on /var/lib/docker""${NC}"
     echo -e "\\n""${ORANGE}""Please check the documentation https://github.com/e-m-b-a/emba/wiki/Installation#prerequisites""${NC}"
     echo ""
@@ -266,8 +267,9 @@ if [[ ${LIST_DEP} -eq 0 ]] ; then
     chmod 777 ./external
   else
     echo -e "\\n""${ORANGE}""WARNING: external directory available: ./external""${NC}"
-    echo -e "${ORANGE}""Please remove it before proceeding ... exit now""${NC}"
-    exit 1
+    echo -e "${ORANGE}""Please remove it before proceeding ...""${NC}"
+    echo ""
+    read -p "If you know what you are doing you can press any key to continue ..." -n1 -s -r
   fi
 
   echo -e "\\n""${ORANGE}""Update package lists.""${NC}"
@@ -284,16 +286,63 @@ apt-get -y install python3-venv
 create_pipenv "./external/emba_venv"
 activate_pipenv "./external/emba_venv"
 
+if ! command -v docker > /dev/null || ! command -v docker compose > /dev/null ; then
+  # OS debian is for Kali Linux
+  OS="debian"
+  [[ "${UBUNTU_OS}" -eq 1 ]] && OS="ubuntu"
+  # Add Docker's official GPG key:
+  apt-get install -y ca-certificates curl gnupg
+  install -m 0755 -d /etc/apt/keyrings
+  curl -fsSL https://download.docker.com/linux/"${OS}"/gpg -o /etc/apt/keyrings/docker.asc
+  chmod a+r /etc/apt/keyrings/docker.asc
+  # Add the repository to Apt sources:
+  if [[ "${UBUNTU_OS}" -eq 1 ]]; then
+    # shellcheck source=/dev/null
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/${OS} \
+    $(. /etc/os-release && echo "${VERSION_CODENAME}") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+  else
+    # probably a kali linux
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/${OS} \
+    bookworm stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+  fi
+  apt-get update -y
+  apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  export DOCKER_COMPOSE=("docker" "compose")
+elif command -v docker-compose > /dev/null ; then
+  echo -e "\n${ORANGE}""${BOLD}""WARNING: Old docker-compose installation found""${NC}"
+  echo -e "${ORANGE}""${BOLD}""It is recommend to remove the current installation and restart the EMBA installation afterwards!""${NC}"
+  read -p "If you know what you are doing you can press any key to continue ..." -n1 -s -r
+  export DOCKER_COMPOSE=("docker-compose")
+  # if we do not have the docker command it probably is a more modern system and we need to install the docker-cli package
+  if ! command -v docker > /dev/null; then
+    echo -e "\n${ORANGE}WARNING: No docker command available -> we check for docker-cli package${NC}"
+    if [[ "$(apt-cache search docker-cli | wc -l)" -gt 0 ]]; then
+      echo -e "\n${ORANGE}Info: No docker command available -> we install the docker-cli package now${NC}"
+      apt-get install docker-cli -y
+    fi
+  fi
+fi
+
+# docker moved around v7 to a new API (API v2)
+# we need to check if our installed docker version has support for the compose sub-command:
+if command -v docker > /dev/null; then
+  if docker --help | grep -q compose; then
+    # new docker API version v2 -> docker v7
+    export DOCKER_COMPOSE=("docker" "compose")
+  elif command -v docker-compose > /dev/null; then
+    # we only need to check the docker-compose version if we are running on the old API with docker-compose
+    DOCKER_COMP_VER=$("${DOCKER_COMPOSE[@]}" -v | grep version | tr '-' ' ' | awk '{print $4}' | tr -d ',' | sed 's/^v//')
+    if [[ $(version "${DOCKER_COMP_VER}") -lt $(version "1.28.5") ]]; then
+      echo -e "\n${ORANGE}WARNING: compatibility of the used docker-compose version is unknown!${NC}"
+      echo -e "\n${ORANGE}Please consider updating your docker-compose installation to version 1.28.5 or later.${NC}"
+      echo -e "\n${ORANGE}Please check the EMBA wiki for further details: https://github.com/e-m-b-a/emba/wiki/Installation#prerequisites${NC}"
+      read -p "If you know what you are doing you can press any key to continue ..." -n1 -s -r
+    fi
+  fi
+fi
+
 # initial installation of the host environment:
 I01_default_apps_host
-
-DOCKER_COMP_VER=$(docker-compose -v | grep version | tr '-' ' ' | awk '{print $4}' | tr -d ',' | sed 's/^v//')
-if [[ $(version "${DOCKER_COMP_VER}") -lt $(version "1.28.5") ]]; then
-  echo -e "\n${ORANGE}WARNING: compatibility of the used docker-compose version is unknown!${NC}"
-  echo -e "\n${ORANGE}Please consider updating your docker-compose installation to version 1.28.5 or later.${NC}"
-  echo -e "\n${ORANGE}Please check the EMBA wiki for further details: https://github.com/e-m-b-a/emba/wiki/Installation#prerequisites${NC}"
-  read -p "If you know what you are doing you can press any key to continue ..." -n1 -s -r
-fi
 
 if [[ "${OTHER_OS}" -eq 1 ]]; then
   # UBUNTU
@@ -347,11 +396,16 @@ if [[ "${CVE_SEARCH}" -ne 1 ]] || [[ "${DOCKER_SETUP}" -ne 1 ]] || [[ "${IN_DOCK
 
   IL15_emulated_checks_init
 
+  IF17_cve_bin_tool
+
   IF50_aggregator_common
 fi
 
-# cve-search is always installed on the host:
-IF20_cve_search
+if [[ "${IN_DOCKER}" -ne 1 ]]; then
+  # NVD CVE data feed is always installed on the host:
+  IF20_nvd_feed
+fi
+
 deactivate
 
 cd "${HOME_PATH}" || exit 1
@@ -361,12 +415,7 @@ chmod 755 ./external
 
 if [[ "${LIST_DEP}" -eq 0 ]] || [[ ${IN_DOCKER} -eq 0 ]] || [[ ${DOCKER_SETUP} -eq 1 ]] || [[ ${FULL} -eq 1 ]]; then
   echo -e "\\n""${MAGENTA}""${BOLD}""Installation notes:""${NC}"
-  echo -e "\\n""${MAGENTA}""INFO: The cron.daily update script for EMBA is located in config/emba_updater""${NC}"
-  echo -e "${MAGENTA}""INFO: For automatic updates it should be copied to /etc/cron.daily/""${NC}"
-  echo -e "${MAGENTA}""INFO: For manual updates just start it via sudo ./config/emba_updater""${NC}"
-
   echo -e "\\n""${MAGENTA}""WARNING: If you plan using the emulator (-E switch) your host and your internal network needs to be protected.""${NC}"
-
   echo -e "\\n""${MAGENTA}""INFO: Do not forget to checkout current development of EMBA at https://github.com/e-m-b-a.""${NC}"
 fi
 if [[ "${WSL}" -eq 1 ]]; then

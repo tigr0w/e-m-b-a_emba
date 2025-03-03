@@ -2,7 +2,7 @@
 
 # EMBA - EMBEDDED LINUX ANALYZER
 #
-# Copyright 2020-2023 Siemens Energy AG
+# Copyright 2020-2025 Siemens Energy AG
 #
 # EMBA comes with ABSOLUTELY NO WARRANTY. This is free software, and you are
 # welcome to redistribute it under the terms of the GNU General Public License.
@@ -25,7 +25,11 @@ ID1_ubuntu_os() {
     print_tool_info "notification-daemon" 1
     print_tool_info "dbus" 1
     print_tool_info "dbus-x11" 1
-    print_tool_info "libnotify-cil-dev" 1
+    # To using ubi and nandsim with modprobe, the linux-modules-extra package must be installed. (Ubuntu 22.04)
+    print_tool_info "linux-modules-extra-$(uname -r)" 1
+
+    # is not available in Ubuntu 24.04 -> need to check on this:
+    # print_tool_info "libnotify-cil-dev" 1
 
     if [[ -f /etc/apt/apt.conf.d/20auto-upgrades ]]; then
       echo "[*] Testing for unattended update settings"

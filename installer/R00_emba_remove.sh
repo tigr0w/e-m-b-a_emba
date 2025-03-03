@@ -2,7 +2,7 @@
 
 # EMBA - EMBEDDED LINUX ANALYZER
 #
-# Copyright 2020-2023 Siemens Energy AG
+# Copyright 2020-2025 Siemens Energy AG
 #
 # EMBA comes with ABSOLUTELY NO WARRANTY. This is free software, and you are
 # welcome to redistribute it under the terms of the GNU General Public License.
@@ -52,7 +52,7 @@ R00_emba_remove() {
   fi
   if [[ -f /etc/mongod.conf ]]; then
     echo -e "\\n""${ORANGE}""Removing EMBAs mongod configuration""${NC}"
-    sed -i 's/bindIp\:\ 172.36.0.1/bindIp\:\ 127.0.0.1/g' /etc/mongod.conf    # inverse of IF20 line 118
+    sed -i "s/bindIp\:\ ${MONGODB_HOST}/bindIp\:\ 127.0.0.1/g" /etc/mongod.conf    # inverse of IF20 line 118
   fi
   if [[ -f /etc/apt/sources.list.d/mongodb-org-4.4.list ]]; then
     echo -e "\\n""${ORANGE}""Removing mongod sources.list configuration""${NC}"

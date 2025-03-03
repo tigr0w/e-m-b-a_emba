@@ -2,7 +2,7 @@
 EMBA - EMBEDDED LINUX ANALYZER
 
 Copyright 2020-2023 Siemens AG
-Copyright 2020-2023 Siemens Energy AG
+Copyright 2020-2025 Siemens Energy AG
 
 EMBA comes with ABSOLUTELY NO WARRANTY. This is free software, and you are
 welcome to redistribute it under the terms of the GNU General Public License.
@@ -30,9 +30,9 @@ Author(s): Michael Messner, Pascal Eckmann, Benedikt Kühne
 # EMBA
 ## The security analyzer for firmware of embedded devices
 
-*EMBA* is designed as the central firmware analysis tool for penetration testers and product security teams. It supports the complete security analysis process starting with *firmware extraction*, doing *static analysis* and *dynamic analysis* via emulation and finally generating a web report. *EMBA* automatically discovers possible weak spots and vulnerabilities in firmware. Examples are insecure binaries, old and outdated software components, potentially vulnerable scripts, or hard-coded passwords. *EMBA* is a command line tool with the possibility to generate an easy-to-use web report for further analysis.
+*EMBA* is designed as the central firmware analysis and SBOM tool for penetration testers, product security teams, developers and responsible product managers. It supports the complete security analysis process starting with *firmware extraction*, doing *static analysis* and *dynamic analysis* via emulation, building the SBOM and finally generating a web based vulnerability report. *EMBA* automatically discovers possible weak spots and vulnerabilities in firmware. Examples are insecure binaries, old and outdated software components, potentially vulnerable scripts, or hard-coded passwords. *EMBA* is a command line tool with the possibility to generate an easy-to-use web report for further analysis.
 
-*EMBA* assists the penetration testers and product security teams in the identification of weak spots and vulnerabilities in the firmware image. *EMBA* provides as much information as possible about the firmware, that the tester can decide on focus areas and is responsible for verifying and interpreting the results.
+*EMBA* assists the penetration testers, product security teams and developers in the identification of weak spots and vulnerabilities in the firmware image. *EMBA* provides as much information as possible about the firmware, that the tester can decide on focus areas and is responsible for verifying and interpreting the results.
 
 [![Watch EMBA](https://raw.githubusercontent.com/wiki/e-m-b-a/emba/images/youtube-emba.png)](https://youtu.be/_dvdy3klFFY "Watch EMBA")
 
@@ -61,16 +61,16 @@ sudo ./installer.sh -d
 sudo ./emba -l ~/log -f ~/firmware -p ./scan-profiles/default-scan.emba
 
 ```
+## Quick start with default SBOM profile:
+For further details on EMBA's SBOM capabilities check the [wiki](https://github.com/e-m-b-a/emba/wiki/SBOM-environment)
+```console
+sudo ./emba -l ~/log -f ~/firmware -p ./scan-profiles/default-sbom.emba
+
+```
 ## Quick start with system-emulation scan profile:
 For further details on EMBA's system-emulation engine check the [wiki](https://github.com/e-m-b-a/emba/wiki/System-emulation).
 ```console
 sudo ./emba -l ~/log -f ~/firmware -p ./scan-profiles/default-scan-emulation.emba
-
-```
-## Quick start with AI-assisted analysis enabled
-For further details on EMBA's AI analysis engine check the [wiki](https://github.com/e-m-b-a/emba/wiki/AI-supported-firmware-analysis).
-```console
-sudo ./emba -l ~/log -f ~/firmware -p ./scan-profiles/default-scan-gpt.emba
 
 ```
 
@@ -79,7 +79,7 @@ sudo ./emba -l ~/log -f ~/firmware -p ./scan-profiles/default-scan-gpt.emba
 
 ## Get involved
 The IoT is growing, the development is ongoing, and there are many new features that we want to add.
-We welcome [pull requests](https://github.com/e-m-b-a/emba/pulls) and [issues](https://github.com/e-m-b-a/emba/issues) on GitHub. Also check the [CONTRIBUTING](./CONTRIBUTING.md) and [CONTRIBUTORS](./CONTRIBUTORS.md) documentation for further information.
+We welcome [pull requests](https://github.com/e-m-b-a/emba/pulls) and [issues](https://github.com/e-m-b-a/emba/issues) on GitHub. Also check the [CONTRIBUTING](./CONTRIBUTING.md) and [CONTRIBUTORS](./CONTRIBUTORS.md) documentation for further details on how to get part of the _EMBA_ commmunity.
 
 ## Team
 

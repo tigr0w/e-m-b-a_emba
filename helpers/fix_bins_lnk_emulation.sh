@@ -2,13 +2,14 @@
 
 # EMBA - EMBEDDED LINUX ANALYZER
 #
-# Copyright 2020-2023 Siemens Energy AG
+# Copyright 2020-2025 Siemens Energy AG
 #
 # EMBA comes with ABSOLUTELY NO WARRANTY. This is free software, and you are
 # welcome to redistribute it under the terms of the GNU General Public License.
 # See LICENSE file for usage of this software.
 #
 # EMBA is licensed under GPLv3
+# SPDX-License-Identifier: GPL-3.0-only
 #
 # Author(s): Michael Messner
 
@@ -33,8 +34,10 @@ POSSIBLE_EXES_ARR=( "${POSSIBLE_ELFS[@]}" "${POSSIBLE_SH[@]}" )
 
 for POSSIBLE_EXE in "${POSSIBLE_EXES_ARR[@]}"; do
   [[ -x "${POSSIBLE_EXE}" ]] && continue
-  echo "[*] Processing executable $(basename "${POSSIBLE_EXE}") - chmod privileges"
-  chmod +x "${POSSIBLE_EXE}"
+  if [[ -f "${POSSIBLE_EXE}" ]]; then
+    echo "[*] Processing executable $(basename "${POSSIBLE_EXE}") - chmod privileges"
+    chmod +x "${POSSIBLE_EXE}"
+  fi
 done
 
 HOME_DIR="$(pwd)"

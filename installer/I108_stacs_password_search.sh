@@ -3,7 +3,7 @@
 # EMBA - EMBEDDED LINUX ANALYZER
 #
 # Copyright 2020-2023 Siemens AG
-# Copyright 2020-2023 Siemens Energy AG
+# Copyright 2020-2025 Siemens Energy AG
 #
 # EMBA comes with ABSOLUTELY NO WARRANTY. This is free software, and you are
 # welcome to redistribute it under the terms of the GNU General Public License.
@@ -27,7 +27,7 @@ I108_stacs_password_search() {
     echo -e "\\nTo find password hashes in firmware files we install STACS and the default rules."
 
     print_tool_info "python3-pip" 1
-    print_tool_info "libarchive13" 1
+    # print_tool_info "libarchive13" 1
     print_tool_info "libarchive-dev" 1
     print_tool_info "pybind11-dev" 1
     print_tool_info "libssl-dev" 1
@@ -50,8 +50,14 @@ I108_stacs_password_search() {
         # fi
 
         # cd ./external/stacs || ( echo "Could not install EMBA component STACS" && exit 1 )
+
+        # deactivate python venv for stacs - this is needed to bypass the pydantic dependency clash with semgrep
+        # we install stacs in the system and semgrep into the virtual environment
+        deactivate
         pip_install "setuptools" "-U"
         pip_install "stacs"
+        activate_pipenv "./external/emba_venv"
+
         # python3 setup.py install
         # cd "${HOME_PATH}" || ( echo "Could not install EMBA component STACS" && exit 1 )
 

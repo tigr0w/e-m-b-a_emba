@@ -3,15 +3,17 @@
 # EMBA - EMBEDDED LINUX ANALYZER
 #
 # Copyright 2020-2023 Siemens AG
-# Copyright 2020-2023 Siemens Energy AG
+# Copyright 2020-2025 Siemens Energy AG
 #
 # EMBA comes with ABSOLUTELY NO WARRANTY. This is free software, and you are
 # welcome to redistribute it under the terms of the GNU General Public License.
 # See LICENSE file for usage of this software.
 #
 # EMBA is licensed under GPLv3
+# SPDX-License-Identifier: GPL-3.0-only
 #
 # Author(s): Michael Messner, Pascal Eckmann
+# Contributor(s): Benedikt Kuehne
 
 # Description:  Check all shell scripts inside ./helpers, ./modules, emba and itself with shellchecker
 
@@ -50,6 +52,9 @@ MODULES_TO_CHECK_ARR_DOCKER=()
 MODULES_TO_CHECK_ARR_PERM=()
 MODULES_TO_CHECK_ARR_COMMENT=()
 MODULES_TO_CHECK_ARR_GREP=()
+MODULES_TO_CHECK_ARR_COPYRIGHT=()
+MODULES_TO_CHECK_ARR_FCT_SPACE=()
+CNT_VAR_CHECKER_ISSUES=0
 
 import_config_scripts() {
   mapfile -t HELPERS < <(find "${CONF_DIR}" -iname "*.sh" 2>/dev/null)
@@ -125,7 +130,7 @@ dockerchecker() {
   mapfile -t DOCKER_COMPS < <(find . -maxdepth 1 -iname "docker-compose*.yml")
   for DOCKER_COMP in "${DOCKER_COMPS[@]}"; do
     echo -e "\\n""${GREEN}""Run docker check on ${DOCKER_COMP}:""${NC}""\\n"
-    if docker-compose -f "${DOCKER_COMP}" config 1>/dev/null || [[ $? -ne 1 ]]; then
+    if docker compose -f "${DOCKER_COMP}" config 1>/dev/null || [[ $? -ne 1 ]]; then
       echo -e "${GREEN}""${BOLD}""==> SUCCESS""${NC}""\\n"
     else
       echo -e "\\n""${ORANGE}${BOLD}==> FIX ERRORS""${NC}""\\n"
@@ -270,7 +275,7 @@ summary() {
   fi
   if [[ "${#MODULES_TO_CHECK_ARR_DOCKER[@]}" -gt 0 ]]; then
     echo -e "\\n\\n""${GREEN}${BOLD}""SUMMARY:${NC}\\n"
-    echo -e "Modules to check (docker-compose): ${#MODULES_TO_CHECK_ARR_DOCKER[@]}\\n"
+    echo -e "Modules to check (docker compose): ${#MODULES_TO_CHECK_ARR_DOCKER[@]}\\n"
     for MODULE in "${MODULES_TO_CHECK_ARR_DOCKER[@]}"; do
       echo -e "${ORANGE}${BOLD}==> FIX MODULE: ""${MODULE}""${NC}"
     done
@@ -292,7 +297,21 @@ summary() {
     done
     echo -e "${ORANGE}""WARNING: Fix the errors before pushing to the EMBA repository!"
   fi
-
+  if [[ "${#MODULES_TO_CHECK_ARR_FCT_SPACE[@]}" -gt 0 ]]; then
+    echo -e "\\n\\n""${GREEN}${BOLD}""SUMMARY:${NC}\\n"
+    echo -e "Modules to check (space usage in function definition): ${#MODULES_TO_CHECK_ARR_FCT_SPACE[@]}\\n"
+    for MODULE in "${MODULES_TO_CHECK_ARR_FCT_SPACE[@]}"; do
+      echo -e "${ORANGE}${BOLD}==> FIX MODULE: ""${MODULE}""${NC}"
+    done
+    echo -e "${ORANGE}""WARNING: Fix the errors before pushing to the EMBA repository!"
+  fi
+  if [[ "${CNT_VAR_CHECKER_ISSUES}" -gt 0 ]]; then
+    echo -e "\\n\\n""${GREEN}${BOLD}""SUMMARY:${NC}\\n"
+    echo -e "Found ${ORANGE}${CNT_VAR_CHECKER_ISSUES}${NC} variable scope issues in EMBA scripts${NC}\\n"
+    echo -e "\\n""${ORANGE}${BOLD}==> FIX ERRORS""${NC}""\\n"
+  else
+    echo -e "\\n""${GREEN}""==> Found no problems with variable scope definition""${NC}""\\n"
+  fi
 }
 
 # check that all tools are installed
@@ -309,17 +328,129 @@ check_tools() {
     echo -e "${ORANGE}git clone https://github.com/returntocorp/semgrep-rules.git external/semgrep-rules${NC}"
     exit 1
   fi
+
+  if [[ ! -f "${HELP_DIR}"/var_check.sh ]]; then
+    echo -e "\\n""${RED}""${BOLD}""EMBA var_checker helper script missing""${NC}""\\n"
+    echo -e "\\n""${RED}""${BOLD}""Please fix the EMBA installation to perform all checks""${NC}""\\n"
+    exit 1
+  fi
+}
+
+list_linter_exceptions(){
+  # lists all linter exceptions for a given toolname inside a directory
+  # $1 tool name
+  # $2 directory
+  # $3 excluded dir for find
+  local TOOL_NAME_="${1:-}"
+  local DIR_="${2:-}"
+  local EXCLUDE_="${3:-}"
+  local SEARCH_PAR_=""
+  local SEARCH_TYPE_=""
+  echo -e "\\n""${GREEN}""Checking for ${TOOL_NAME_} exceptions inside ${DIR_}:""${NC}""\\n"
+  case "${TOOL_NAME_}" in
+    shellcheck)
+      SEARCH_PAR_="shellcheck disable"
+      SEARCH_TYPE_="sh"
+      ;;
+    semgrep)
+      SEARCH_PAR_="nosemgrep"
+      SEARCH_TYPE_="sh"
+      ;;
+  esac
+  mapfile -t EXCEPTION_SCRIPTS < <(find "${DIR_}" -type d -path "${EXCLUDE_}" -prune -false -o -iname "*.${SEARCH_TYPE_}" -exec grep -H "${SEARCH_PAR_}" {} \;)
+  if [[ "${#EXCEPTION_SCRIPTS[@]}" -gt 0 ]]; then
+    for EXCEPTION_ in "${EXCEPTION_SCRIPTS[@]}"; do
+      echo -e "${GREEN}Found exception in ${ORANGE}${EXCEPTION_%%:*}:${EXCEPTION_##*:}${NC}"
+      EXCEPTIONS_TO_CHECK_ARR+=( "${EXCEPTION_%%:*}" )
+    done
+  else
+    echo -e "\\n""${GREEN}""=> Found no exceptions for ${TOOL_NAME_}""${NC}""\\n"
+  fi
+}
+
+copy_right_check(){
+  # checks all Copyright occurences for supplied end-year
+  # $1 copyright holder
+  # $2 end-year
+  # $3 dir to look in
+  # $4 excluded dir for find
+  local OWNER_="${1:-}"
+  local YEAR_="${2:-}"
+  local DIR_="${3:-}"
+  local EXCLUDE_="${4:-}"
+  echo -e "\\n""${ORANGE}""${BOLD}""EMBA Copyright check""${NC}""\\n""${BOLD}""=================================================================""${NC}"
+  mapfile -t COPYRIGHT_LINE_ < <(find "${DIR_}" -type d -path "${EXCLUDE_}" -prune -false -o -type f -not -wholename "${0}" -iname "*.sh" -exec grep -H "Copyright" {} \;)
+  if [[ "${#COPYRIGHT_LINE_[@]}" -gt 0 ]]; then
+    for LINE_ in "${COPYRIGHT_LINE_[@]}"; do
+      if [[ "${LINE_##*:}" == *"${OWNER_}" && "${LINE_##*:}" != *"${YEAR_}"* ]]; then
+        MODULES_TO_CHECK_ARR_COPYRIGHT+=( "${LINE_%%:*}" )
+        echo -e "Found problem with Copyright for ${GREEN}${OWNER_}${NC} in ${LINE_%%:*}: ${ORANGE}${LINE_##*:}""${NC}""\\n"
+        echo -e "\\n""${ORANGE}${BOLD}==> FIX ERRORS""${NC}""\\n"
+      fi
+    done
+  fi
+  if [[ "${#MODULES_TO_CHECK_ARR_COPYRIGHT[@]}" -eq 0 ]]; then
+    echo -e "\\n""${GREEN}""==> Found no problems with copyrights""${NC}""\\n"
+  fi
+}
+
+function_entry_space_check() {
+  # ensure we have the space in the function definition:
+  # function_name() {
+  # invalid:
+  # function_name(){
+  echo -e "\\n""${ORANGE}""${BOLD}""EMBA function space definition check""${NC}""\\n""${BOLD}""=================================================================""${NC}"
+
+  mapfile -t FCT_SPACE_MODULES_ARR < <(grep -r '(){' modules/* || true)
+  mapfile -t FCT_SPACE_HLP_ARR < <(grep -r '(){' helpers/* || true)
+
+  if [[ "${#FCT_SPACE_MODULES_ARR[@]}" -gt 0 ]] || [[ "${#FCT_SPACE_HLP_ARR[@]}" -gt 0 ]]; then
+    echo -e "Found problem with spaces in function definition${NC}\\n"
+    echo -e "\\n""${ORANGE}${BOLD}==> FIX ERRORS""${NC}""\\n"
+    MODULES_TO_CHECK_ARR_FCT_SPACE=("${FCT_SPACE_MODULES_ARR[@]}" "${FCT_SPACE_HLP_ARR[@]}")
+  else
+    echo -e "\\n""${GREEN}""==> Found no problems with spaces in function definition. Helpers are currently ignored.""${NC}""\\n"
+  fi
+}
+
+var_checker() {
+  local MODE="${1:-}"
+  local RET_ISSUES=0
+
+  echo -e "\\n""${ORANGE}""${BOLD}""EMBA variable declation scope check for ${MODE}""${NC}""\\n""${BOLD}""=================================================================""${NC}"
+
+  disable_strict_mode 1
+  "${HELP_DIR}"/var_check.sh "${MODE}"
+  RET_ISSUES="$?"
+
+  CNT_VAR_CHECKER_ISSUES=$((CNT_VAR_CHECKER_ISSUES+RET_ISSUES))
+
+  if [[ "${CNT_VAR_CHECKER_ISSUES}" -gt 0 ]]; then
+    echo -e "Found ${ORANGE}${CNT_VAR_CHECKER_ISSUES}${NC} variable scope issues in EMBA ${MODE} scripts${NC}\\n"
+    echo -e "\\n""${ORANGE}${BOLD}==> FIX ERRORS""${NC}""\\n"
+  else
+    echo -e "\\n""${GREEN}""==> Found no problems with variable scope definition""${NC}""\\n"
+  fi
+  enable_strict_mode 1
 }
 
 # main:
 check_tools
 check
+var_checker modules
+var_checker helpers
+function_entry_space_check
 dockerchecker
+copy_right_check "Siemens Energy AG" 2025 ./ ./external
+list_linter_exceptions shellcheck ./ ./external
+list_linter_exceptions semgrep ./ ./external
 summary
 
 if [[ "${#MODULES_TO_CHECK_ARR_TAB[@]}" -gt 0 ]] || [[ "${#MODULES_TO_CHECK_ARR[@]}" -gt 0 ]] || \
   [[ "${#MODULES_TO_CHECK_ARR[@]}" -gt 0 ]] || [[ "${#MODULES_TO_CHECK_ARR_SEMGREP[@]}" -gt 0 ]] || \
   [[ "${#MODULES_TO_CHECK_ARR_DOCKER[@]}" -gt 0 ]] || [[ "${#MODULES_TO_CHECK_ARR_PERM[@]}" -gt 0 ]] || \
-  [[ "${#MODULES_TO_CHECK_ARR_COMMENT[@]}" -gt 0 ]] || [[ "${#MODULES_TO_CHECK_ARR_GREP[@]}" -gt 0 ]]; then
+  [[ "${#MODULES_TO_CHECK_ARR_COMMENT[@]}" -gt 0 ]] || [[ "${#MODULES_TO_CHECK_ARR_GREP[@]}" -gt 0 ]] || \
+  [[ "${#MODULES_TO_CHECK_ARR_COPYRIGHT[@]}" -gt 0 ]] || [[ "${#MODULES_TO_CHECK_ARR_FCT_SPACE[@]}" -gt 0 ]] || \
+  [[ "${CNT_VAR_CHECKER_ISSUES}" -gt 0 ]]; then
   exit 1
 fi

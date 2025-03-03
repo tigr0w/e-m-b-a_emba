@@ -3,7 +3,7 @@
 # EMBA - EMBEDDED LINUX ANALYZER
 #
 # Copyright 2020-2023 Siemens AG
-# Copyright 2020-2023 Siemens Energy AG
+# Copyright 2020-2025 Siemens Energy AG
 #
 # EMBA comes with ABSOLUTELY NO WARRANTY. This is free software, and you are
 # welcome to redistribute it under the terms of the GNU General Public License.
@@ -24,7 +24,6 @@ I01_default_apps_host() {
   print_tool_info "jq" 1
   print_tool_info "shellcheck" 1
   print_tool_info "unzip" 1
-  print_tool_info "docker-compose" 1
   print_tool_info "bc" 1
   print_tool_info "coreutils" 1
   print_tool_info "ncurses-bin" 1
@@ -52,6 +51,14 @@ I01_default_apps_host() {
       echo
       apt-get install "${INSTALL_APP_LIST[@]}" -y
       pip_install "requests" "-U"
+
+      if ! command -v "${DOCKER_COMPOSE[@]}" > /dev/null; then
+        echo "Installing ${DOCKER_COMPOSE[*]} manually:"
+        # install docker-compose manually:
+        curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        chmod +x /usr/local/bin/docker-compose
+      fi
+
     ;;
   esac
 }

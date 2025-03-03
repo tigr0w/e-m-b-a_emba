@@ -3,7 +3,7 @@
 # EMBA - EMBEDDED LINUX ANALYZER
 #
 # Copyright 2020-2023 Siemens AG
-# Copyright 2020-2023 Siemens Energy AG
+# Copyright 2020-2025 Siemens Energy AG
 #
 # EMBA comes with ABSOLUTELY NO WARRANTY. This is free software, and you are
 # welcome to redistribute it under the terms of the GNU General Public License.
@@ -20,7 +20,7 @@ I05_emba_docker_image_dl() {
   module_title "${FUNCNAME[0]}"
 
   if [[ "${LIST_DEP}" -eq 1 ]] || [[ "${IN_DOCKER}" -eq 0 ]] || [[ "${DOCKER_SETUP}" -eq 1 ]] || [[ "${FULL}" -eq 1 ]]; then
-    print_tool_info "docker.io" 0 "docker"
+    # print_tool_info "docker.io" 1
 
     echo -e "\\n""${ORANGE}""${BOLD}""embeddedanalyzer/emba docker image""${NC}"
     echo -e "Description: EMBA docker images used for firmware analysis."
@@ -50,9 +50,11 @@ I05_emba_docker_image_dl() {
           echo -e "${ORANGE}""EMBA docker image will be downloaded.""${NC}"
           echo -e "${ORANGE}""CONTAINER VARIABLE SET TO ""${CONTAINER}""${NC}"
           docker pull "${CONTAINER}"
+          # we do not need to download the latest docker image -> we can just tag it locally
+          docker tag "${CONTAINER}" "${CONTAINER/:*}:latest"
           sed -i "/image:/c\    image: ${CONTAINER}" docker-compose.yml
           export DOCKER_CLI_EXPERIMENTAL=disabled
-          docker-compose up --no-start
+          "${DOCKER_COMPOSE[@]}" up --no-start
         else
           echo "Estimated download-Size: ~5500 MB"
           echo -e "${ORANGE}""WARNING: docker command missing - no docker pull possible.""${NC}"

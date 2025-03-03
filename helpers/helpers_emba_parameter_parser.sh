@@ -2,7 +2,7 @@
 
 # EMBA - EMBEDDED LINUX ANALYZER
 #
-# Copyright 2020-2023 Siemens Energy AG
+# Copyright 2020-2025 Siemens Energy AG
 # Copyright 2020-2023 Siemens AG
 #
 # EMBA comes with ABSOLUTELY NO WARRANTY. This is free software, and you are
@@ -10,6 +10,7 @@
 # See LICENSE file for usage of this software.
 #
 # EMBA is licensed under GPLv3
+# SPDX-License-Identifier: GPL-3.0-only
 #
 # Author(s): Michael Messner, Pascal Eckmann
 
@@ -17,7 +18,7 @@
 
 
 emba_parameter_parsing() {
-  while getopts a:bBA:cC:d:De:Ef:Fghijk:l:m:N:o:p:P:QrsStT:UVxX:yY:WzZ: OPT ; do
+  while getopts a:bBA:cC:d:De:Ef:Fhik:l:m:N:o:p:P:qQrsStT:UVX:yY:WzZ: OPT ; do
     case "${OPT}" in
       a)
         check_alnum "${OPTARG}"
@@ -36,6 +37,7 @@ emba_parameter_parsing() {
         ;;
       B)
         export DISABLE_STATUS_BAR=0
+        export SILENT=1
         ;;
       C)
         # container extract only works outside the docker container
@@ -46,7 +48,7 @@ emba_parameter_parsing() {
         export CONTAINER_EXTRACT=1
         ;;
       c)
-        export CWE_CHECKER=1
+        export BINARY_EXTENDED=1
         ;;
       d)
         check_int "${OPTARG}"
@@ -55,12 +57,13 @@ emba_parameter_parsing() {
         # a value of 2 means dep check only in container
         ! [[ "${ONLY_DEP}" =~ [12] ]] && exit 1
         # on dependency check we need to check all deps -> activate all modules:
-        export CWE_CHECKER=1
+        export BINARY_EXTENDED=1
         export FULL_EMULATION=1
         ;;
       D)
-        # new debugging mode
+        # debugging mode
         # EMBA runs without docker in full install mode
+        # WARNING: this should only be used for dev tasks and not for real fw analysis
         export USE_DOCKER=0
         ;;
       e)
@@ -82,20 +85,15 @@ emba_parameter_parsing() {
       F)
         export FORCE=1
         ;;
-      g)
-        export LOG_GREP=1
-        ;;
       h)
         print_help
         exit 0
         ;;
       i)
         # for detecting the execution in docker container:
+        # this parameter is only EMBA internally used
         export IN_DOCKER=1
         export USE_DOCKER=0
-        ;;
-      j)
-        export JUMP_OVER_CVESEARCH_CHECK=1
         ;;
       k)
         check_path_input "${OPTARG}"
@@ -113,10 +111,11 @@ emba_parameter_parsing() {
         LOG_DIR="$(escape_echo "${OPTARG}")"
         export TMP_DIR="${LOG_DIR}""/tmp"
         export CSV_DIR="${LOG_DIR}""/csv_logs"
+        export JSON_DIR="${LOG_DIR}""/json_logs"
         ;;
       m)
         check_alnum "${OPTARG}"
-        SELECT_MODULES=("${SELECT_MODULES[@]}" "$(escape_echo "${OPTARG}")")
+        export SELECT_MODULES=("${SELECT_MODULES[@]}" "$(escape_echo "${OPTARG}")")
         ;;
       N)
         check_notes "${OPTARG}"
@@ -135,8 +134,10 @@ emba_parameter_parsing() {
         check_path_input "${OPTARG}"
         export PROFILE=""
         PROFILE="$(escape_echo "${OPTARG}")"
+        PROFILE="${INVOCATION_PATH}/scan-profiles/$(basename "${PROFILE}")"
         if ! [[ -f "${PROFILE}" ]]; then
           print_output "[-] No profile found!" "no_log"
+          print_output "[*] Note: A profile needs to be stored in the EMBA scan-profile directory!" "no_log"
           exit 1
         fi
        ;;
@@ -145,10 +146,14 @@ emba_parameter_parsing() {
         export MAX_MODS=""
         MAX_MODS="$(escape_echo "${OPTARG}")"
         ;;
+      q)
+        export DISABLE_DEEP=1
+        ;;
       Q)
         export FULL_EMULATION=1
         ;;
       r)
+        # removes the extracted firmware as well as the emulation archives from l10
         export FINAL_FW_RM=1
        ;;
       s)
@@ -157,9 +162,9 @@ emba_parameter_parsing() {
       S)
         export STRICT_MODE=1
         ;;
-      t)
-        export THREADED=1
-        ;;
+#      t)
+#        export THREADED=1
+#        ;;
       T)
         check_int "${OPTARG}"
         export MAX_MOD_THREADS=""
@@ -171,9 +176,6 @@ emba_parameter_parsing() {
       V)
         print_output "[+] EMBA version: ${ORANGE}${EMBA_VERSION}${NC}" "no_log"
         exit 0
-        ;;
-      x)
-        export DEEP_EXTRACTOR=1
         ;;
       W)
         export HTML=1

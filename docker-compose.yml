@@ -1,55 +1,46 @@
-version: "3"
 services:
   # nosemgrep
   emba:
-    image: embeddedanalyzer/emba:latest
+    image: embeddedanalyzer/emba:1.5.1g
     container_name: emba
-    read_only: true
+    read_only: false
     # all pre-checker mount modules need privileged mode
     # nosemgrep
     privileged: true
     # /root/.config is needed for binwalk - further recovery for other tools needed
-    # /root/.cache is needed for unblob -> further recovery of this directory needed
-    # /external/arachni/... needed by arachni (full system emulator modules)
-    # /external/freetz-ng/.fakeroot-cache needed by freetz-ng (AVM extractor)
-    # Todo: cleanup of tmpfs entries
+    # /root/.config is needed for cwe_checker
+    # /root/.local is needed for cwe_checker
     tmpfs:
-      - /tmp
+      # exec on /tmp is needed for capa -> Todo: find better solution
+      - /tmp:exec
       - /root/.config/
-      - /root/.local/
+      - /root/.local/share/composer/
+      - /root/.local/share/cwe_checker/
+        # - /root/.local/share
       - /root/.cache/
-      - /root/.cache/pypoetry/virtualenvs:exec
-      - /root
-      - /root/.cargo/bin:exec
+      - /root/.semgrep/
+      - /root/.ghidra/
+      - /root/.msf4
+      - /root/.john
+      - /root/.gnupg
       - /run/lock
       - /var/run
       - /var/tmp
       - /var/lock
-      - /var/lib/nikto:exec
-      - /external/freetz-ng/.fakeroot-cache
-      - /external/arachni/arachni-1.6.1.3-0.6.1.1/bin/../.system/arachni-ui-web/config/component_cache
-      - /external/arachni/arachni-1.6.1.3-0.6.1.1/bin/../.system/arachni-ui-web/db
-      - /external/arachni/arachni-1.6.1.3-0.6.1.1/bin/../.system/arachni-ui-web/tmp
-      - /external/arachni/arachni-1.6.1.3-0.6.1.1/bin/../.system/../logs
-      - /external/arachni/arachni-1.6.1.3-0.6.1.1/bin/../.system/home
     build: .
     # /dev is needed for the system emulator (L10)
-    # /lib/modules is needed for modules which are loading kernel modules (e.g. extractors)
-    # /boot is needed for modules which are loading kernel modules (e.g. extractors like P10)
     volumes:
         - ${FIRMWARE}/:/firmware:ro
         - ${LOG}/:/logs
         - ${EMBA}/:/emba:ro
         - ${EMBA}/external/linux_kernel_sources/:/external/linux_kernel_sources:ro
+        - ${EMBA}/external/nvd-json-data-feeds/:/external/nvd-json-data-feeds:ro
         - /etc/localtime:/etc/localtime:ro
         - /dev:/dev
-        - /lib/modules:/lib/modules:ro
-        - /boot:/boot:ro
     environment:
         - USER
         - CONTAINER_NUMBER=1
-    networks:
-      - emba_runs
+    # network_mode: host
     devices:
       - /dev/fuse:/dev/fuse:rwm
     cap_add:
@@ -60,29 +51,23 @@ services:
         soft: 0
 
   emba_quest:
-    image: embeddedanalyzer/emba:latest
+    image: embeddedanalyzer/emba:1.5.1g
     container_name: emba_quest
     read_only: true
     tmpfs:
       - /tmp
-      - /root/.config/
-      - /root/.local/
-      - /root/.cache/
       - /root
       - /run/lock
       - /var/run
       - /var/tmp
       - /var/lock
-    # /dev is needed for the system emulator (L10)
-    # /lib/modules is needed for modules which are loading kernel modules (e.g. extractors)
-    # /boot is needed for modules which are loading kernel modules (e.g. extractors like P10)
     volumes:
         - ${FIRMWARE}/:/firmware:ro
         - ${LOG}/:/logs
         - ${EMBA}/:/emba:ro
         - ${EMBA}/external/linux_kernel_sources/:/external/linux_kernel_sources
+        - ${EMBA}/external/nvd-json-data-feeds/:/external/nvd-json-data-feeds:ro
         - /etc/localtime:/etc/localtime:ro
-        - /dev:/dev
     environment:
         - USER
         - CONTAINER_NUMBER=2
@@ -94,13 +79,3 @@ services:
     security_opt:
       - no-new-privileges:true
 
-networks:
-  emba_runs:
-    name: emba_runs
-    driver: bridge
-    internal: true
-    driver_opts:
-      com.docker.network.bridge.name: emba_runs
-    ipam:
-      config:
-        - subnet: "172.36.0.0/16"

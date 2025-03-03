@@ -2,20 +2,21 @@
 
 # EMBA - EMBEDDED LINUX ANALYZER
 #
-# Copyright 2020-2023 Siemens Energy AG
+# Copyright 2020-2025 Siemens Energy AG
 #
 # EMBA comes with ABSOLUTELY NO WARRANTY. This is free software, and you are
 # welcome to redistribute it under the terms of the GNU General Public License.
 # See LICENSE file for usage of this software.
 #
 # EMBA is licensed under GPLv3
+# SPDX-License-Identifier: GPL-3.0-only
 #
 # Author(s): Michael Messner
 
 # Description:  Stop and cleanup emulation environment
 
 L99_cleanup() {
-  local MODULE_END=0
+  local lMODULE_END=0
 
   if [[ "${SYS_ONLINE}" -eq 1 ]] && [[ "${TCP}" == "ok" ]]; then
     module_log_init "${FUNCNAME[0]}"
@@ -25,7 +26,7 @@ L99_cleanup() {
     # as we are running from the run.sh startup script the network is also reconfigured
     stopping_emulation_process "${IMAGE_NAME}"
 
-    module_end_log "${FUNCNAME[0]}" "${MODULE_END}"
+    module_end_log "${FUNCNAME[0]}" "${lMODULE_END}"
   fi
 }
 
